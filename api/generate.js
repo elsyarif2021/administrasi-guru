@@ -72,7 +72,14 @@ export default async function handler(req, res) {
     if(!assessment || body.kind!=='Instrumen Soal')return fail(res,400,'Batch hanya untuk instrumen soal.');
     const match=assessmentTypes.find(([,name])=>name===batch.type);
     if(!match||!Number.isSafeInteger(batch.start)||!Number.isSafeInteger(batch.count)||batch.start<1||batch.count<1||batch.count>8||batch.start+batch.count-1>assessment[match[0]])return fail(res,400,'Parameter batch tidak valid.');
-    batchText='\nGENERASI BERTAHAP: BUAT TEPAT '+batch.count+' SOAL '+batch.type+' dengan penomoran '+batch.start+' sampai '+(batch.start+batch.count-1)+'. Jangan membuat jenis soal lain dalam batch ini.';
+    if(!['questions','answers'].includes(batch.phase))return fail(res,400,'Tahap pembuatan soal tidak valid.');
+    if(batch.phase==='answers' && (!bounded(batch.questions,12000)||batch.questions.length>12000))return fail(res,400,'Soal rujukan untuk kunci jawaban tidak valid.');
+    batchText='\nGENERASI BERTAHAP: BUAT TEPAT '+batch.count+' BUTIR '+batch.type+' nomor '+batch.start+' sampai '+(batch.start+batch.count-1)+'.\n';
+    if(batch.phase==='questions'){
+      batchText+='TAHAP NASKAH SOAL: tulis HANYA soal beserta opsi jawaban jika PG. JANGAN tulis kunci, jawaban benar, pembahasan, rubrik atau solusi apa pun. Penomoran wajib persis dan berurutan.';
+    }else{
+      batchText+='TAHAP KUNCI JAWABAN DAN PEMBAHASAN: tulis HANYA jawaban benar serta pembahasan bernomor untuk SOAL BERIKUT. JANGAN tulis ulang pertanyaan atau opsi. Beri penjelasan substantif untuk setiap nomor.\nSOAL RUJUKAN:\n'+bounded(batch.questions,12000);
+    }
   }
   const attrs = ['section','kind','school','level','grade','subject','topic','semester','year','hours'];
   const payload = attrs.map(k => k.toUpperCase() + ': ' + bounded(body[k], 500)).join('\n')+'\n'+assessmentText+batchText;
@@ -88,7 +95,7 @@ export default async function handler(req, res) {
     "Untuk LKPD sertakan tujuan, instruksi dan kegiatan terinci, soal/tugas konkret dengan jawaban atau rubrik terpisah.",
     "Untuk Jurnal Pembelajaran jangan mengarang pelaksanaan nyata atau kehadiran: sediakan tabel pertemuan dan catatan realisasi yang akan diisi guru.",
     "Untuk Kisi-kisi, KKTP dan Rubrik buat tabel berisi indikator, level kognitif, teknik asesmen, kriteria dan skor terperinci.",
-    "Untuk Instrumen Soal ikuti parameter jumlah tiap jenis soal secara tepat. Jika ada GENERASI BERTAHAP, buat HANYA jumlah dan jenis yang diminta di batch, gunakan nomor asli yang diminta, jangan ulang dari 1. Setiap soal harus unik, jelas dan dapat dijawab. Setelah soal dalam batch beri kunci serta pembahasan untuk nomor batch tersebut.",
+    "Untuk Instrumen Soal ikuti parameter jumlah tiap jenis soal secara tepat. Jika tahap NASKAH SOAL, jangan berikan kunci jawaban, pembahasan, atau penanda jawaban benar. Jika tahap KUNCI JAWABAN DAN PEMBAHASAN, berikan jawaban dan pembahasan tanpa mengulang naskah soal. Patuhi nomor global yang diminta.",
     "PG biasa dan PG TKA WAJIB memakai rentang opsi tepat sesuai input: A-C berarti A, B, C; A-D berarti A, B, C, D; A-E berarti A, B, C, D, E. Jangan menambahkan pilihan di luar rentang.",
     "PG TKA menekankan penalaran tingkat tinggi dan konteks stimulus. PG Salah–Benar hanya boleh dibuat jika jenjang SMP, berupa pernyataan yang diklasifikasikan Benar atau Salah. Esai TKA menekankan analisis/evaluasi mendalam, berbeda dari Esai biasa.",
     "Bila jenis dokumen administrasi asesmen selain instrumen soal, gunakan komposisi soal yang diberikan untuk membuat kisi-kisi, KKTP atau rubrik selaras dengan jenis dan jumlah butir.",
@@ -105,7 +112,7 @@ export default async function handler(req, res) {
     // A compact retry helps when a reasoning model exhausts its generation
     // budget before writing message.content. Do not expose message.thinking.
     const retrySystem=retry
-      ? 'Anda adalah penulis dokumen administrasi guru. Berikan langsung dokumen final dalam bahasa Indonesia dengan bagian ## dan tabel Markdown jika perlu. Tanpa penalaran, tanpa pendahuluan. Pastikan ada teks dokumen.'
+      ? system+' Jawab langsung secara ringkas, tanpa proses penalaran.'
       : system;
     const retryPayload=retry
       ? payload+'\nTuliskan hanya dokumen final yang lengkap dan langsung, bukan analisis. Prioritaskan jawaban daripada penalaran.'
