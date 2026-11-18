@@ -16,6 +16,7 @@ const ALLOWED_MODELS = new Set([
 ]);
 const MAX_BODY_BYTES = 18000;
 const MAX_INPUT = 2000;
+const requests = new Map();
 
 function originAllowed(origin) {
   const configured = (process.env.ALLOWED_ORIGINS || '').split(',').map(s => s.trim()).filter(Boolean);
@@ -26,7 +27,7 @@ function setHeaders(res, origin) {
     res.setHeader('Access-Control-Allow-Origin', origin);
     res.setHeader('Vary', 'Origin');
     res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-App-Access-Token');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   }
   res.setHeader('Cache-Control', 'no-store');
   res.setHeader('X-Content-Type-Options', 'nosniff');
@@ -43,9 +44,22 @@ export default async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(originAllowed(origin) ? 204 : 403).end();
   if (req.method !== 'POST') return fail(res, 405, 'Metode tidak didukung.');
   if (origin && !originAllowed(origin)) return fail(res, 403, 'Origin tidak diizinkan.');
-  if (!process.env.OLLAMA_API_KEY || !process.env.APP_ACCESS_TOKEN) return fail(res, 503, 'Backend belum dikonfigurasi. Setel OLLAMA_API_KEY dan APP_ACCESS_TOKEN.');
-  const token = req.headers['x-app-access-token'];
-  if (!token || token !== process.env.APP_ACCESS_TOKEN) return fail(res, 401, 'Kode akses AI salah.');
+
+  if (!process.env.OLLAMA_API_KEY) return fail(res, 503, 'OLLAMA_API_KEY belum dikonfigurasi di Vercel.');
+  // Best-effort per-instance throttle; for a public launch enable persistent rate
+  // limiting, bot controls, and budget limits in the Vercel firewall.
+  const forwarded = String(req.headers['x-forwarded-for'] || '').split(',')[0].trim();
+  const ip = forwarded || req.socket?.remoteAddress || 'unknown';
+  const now = Date.now();
+  const windowMs = 60 * 60 * 1000;
+  const bucket = requests.get(ip) || {start: now, count: 0};
+  if(now-bucket.start>=windowMs){bucket.start=now;bucket.count=0;}
+  if(bucket.count>=8)return fail(res,429,'Batas 8 permintaan AI per jam tercapai. Coba lagi nanti.');
+  bucket.count++;
+  requests.set(ip,bucket);
+  if(requests.size>2000){
+    for(const [addr,entry] of requests){if(now-entry.start>=windowMs)requests.delete(addr);}
+  }
   const body = typeof req.body === 'object' && req.body ? req.body : {};
   if (JSON.stringify(body).length > MAX_BODY_BYTES) return fail(res, 413, 'Permintaan terlalu besar.');
   if (body.ping === true) return res.status(200).json({ok:true});
