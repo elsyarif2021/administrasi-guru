@@ -249,49 +249,72 @@ $('generate').onclick=async()=>{
    const config=assessmentConfig();
    const types=[['PG Biasa',config.pg],['PG TKA',config.pgTka],['PG Salah–Benar',config.salahBenar],['Esai',config.esai],['Esai TKA',config.esaiTka]];
    const fingerprint=JSON.stringify({model:get('aiModel'),school:get('school'),level:get('level'),grade:get('grade'),subject:get('subject'),topic:get('topic'),semester:get('semester'),year:get('year'),config});
-   const checkpointKey='ag-asesmen-progress-v2';
+   const checkpointKey='ag-asesmen-two-phases-v3';
    let checkpoint;
    try{checkpoint=JSON.parse(localStorage.getItem(checkpointKey)||'null')}catch{}
-   if(!checkpoint||checkpoint.fingerprint!==fingerprint)checkpoint={fingerprint,items:[]};
-   const done=new Map(checkpoint.items.map(it=>[it.number,it]));
+   if(!checkpoint||checkpoint.fingerprint!==fingerprint)checkpoint={fingerprint,questions:[],answers:[]};
+   const questionMap=new Map((checkpoint.questions||[]).map(it=>[it.number,it]));
+   const answerMap=new Map((checkpoint.answers||[]).map(it=>[it.number,it]));
+   const batchList=[];
    let globalNumber=1;
-   let completed=done.size;
    for(const [type,amount] of types){
     for(let offset=0;offset<amount;offset+=5){
-     const count=Math.min(5,amount-offset);
-     const start=globalNumber+offset;
-     const numbers=Array.from({length:count},(_,j)=>start+j);
-     if(numbers.every(n=>done.has(n)))continue;
-     let lastError;
-     for(let attempt=1;attempt<=2;attempt++){
-      try{
-       $('notice').textContent='Membuat '+type+' nomor '+start+'–'+(start+count-1)+' • '+completed+'/'+config.total+' selesai • percobaan '+attempt+'/2';
-       const chunk=await requestAI({type,start,count,phase:'combined'});
-       if(!Array.isArray(chunk.items)||chunk.items.length!==count)throw Error('Hasil kelompok tidak lengkap.');
-       chunk.items.forEach(it=>done.set(it.number,{...it,type}));
-       checkpoint.items=Array.from(done.values()).sort((a,b)=>a.number-b.number);
-       localStorage.setItem(checkpointKey,JSON.stringify(checkpoint));
-       completed=done.size;lastError=null;break;
-      }catch(error){lastError=error;}
-     }
-     if(lastError)throw Error('Kelompok '+type+' nomor '+start+'–'+(start+count-1)+' gagal: '+lastError.message+'. '+completed+' soal telah tersimpan sementara. Klik Generate kembali untuk melanjutkan.');
+     batchList.push({type,start:globalNumber+offset,count:Math.min(5,amount-offset)});
     }
     globalNumber+=amount;
    }
-   const questions=[],answers=[];
+   const saveCheckpoint=()=>{
+    checkpoint.questions=Array.from(questionMap.values()).sort((a,b)=>a.number-b.number);
+    checkpoint.answers=Array.from(answerMap.values()).sort((a,b)=>a.number-b.number);
+    localStorage.setItem(checkpointKey,JSON.stringify(checkpoint));
+   };
+   async function generateBatch(batch,phase,reference){
+    let lastError;
+    for(let attempt=1;attempt<=2;attempt++){
+     try{
+      const countDone=phase==='questions'?questionMap.size:answerMap.size;
+      $('notice').textContent=(phase==='questions'?'TAHAP 1/2 — SOAL':'TAHAP 2/2 — KUNCI & PEMBAHASAN')+' '+batch.type+' nomor '+batch.start+'–'+(batch.start+batch.count-1)+' • '+countDone+'/'+config.total+' • percobaan '+attempt+'/2';
+      const result=await requestAI({...batch,phase,questions:reference||undefined});
+      if(!Array.isArray(result.items)||result.items.length!==batch.count)throw Error('Jumlah butir tidak sesuai.');
+      result.items.forEach(it=>{
+       if(phase==='questions')questionMap.set(it.number,{...it,type:batch.type});
+       else answerMap.set(it.number,{...it,type:batch.type});
+      });
+      saveCheckpoint();
+      return;
+     }catch(err){lastError=err;}
+    }
+    throw Error((phase==='questions'?'Pembuatan soal':'Pembuatan kunci')+' nomor '+batch.start+'–'+(batch.start+batch.count-1)+' gagal: '+lastError.message+'. Hasil sebelumnya sudah tersimpan, klik Generate untuk melanjutkan.');
+   }
+   // PHASE 1: finish the ENTIRE question paper before asking for any answer key.
+   for(const batch of batchList){
+    const required=Array.from({length:batch.count},(_,i)=>batch.start+i);
+    if(required.every(n=>questionMap.has(n)))continue;
+    await generateBatch(batch,'questions');
+   }
+   if(questionMap.size!==config.total)throw Error('Naskah soal belum lengkap: '+questionMap.size+'/'+config.total);
+   // PHASE 2: answer ONLY the questions saved from phase 1.
+   for(const batch of batchList){
+    const required=Array.from({length:batch.count},(_,i)=>batch.start+i);
+    if(required.every(n=>answerMap.has(n)))continue;
+    const reference=required.map(n=>questionMap.get(n)).map(it=>({number:it.number,question:it.question,options:it.options}));
+    await generateBatch(batch,'answers',reference);
+   }
+   if(answerMap.size!==config.total)throw Error('Kunci belum lengkap: '+answerMap.size+'/'+config.total);
+   const questionParts=[],answerParts=[];
    for(const [type,amount] of types){
     if(!amount)continue;
-    questions.push('## '+type);
-    answers.push('### '+type);
-    const members=Array.from(done.values()).filter(it=>it.type===type).sort((x,y)=>x.number-y.number);
-    for(const it of members){
-      questions.push('**'+it.number+'.** '+it.question);
-      if(it.options.length)questions.push(it.options.map(option=>'- '+option).join('\n'));
-      answers.push('**'+it.number+'.** '+it.answer+'\n\n'+it.explanation);
+    questionParts.push('## '+type);
+    answerParts.push('### '+type);
+    const list=Array.from(questionMap.values()).filter(it=>it.type===type).sort((a,b)=>a.number-b.number);
+    for(const item of list){
+     questionParts.push('**'+item.number+'.** '+item.question);
+     if(item.options.length)questionParts.push(item.options.map(x=>'- '+x).join('\n'));
+     const answer=answerMap.get(item.number);
+     answerParts.push('**'+item.number+'.** '+answer.answer+'\n\n'+answer.explanation);
     }
    }
-   if(done.size!==config.total)throw Error('Jumlah hasil tidak lengkap: '+done.size+' dari '+config.total);
-   data={content:'# NASKAH SOAL\n\n'+questions.join('\n\n')+'\n\n---\n\n# KUNCI JAWABAN DAN PEMBAHASAN\n\n'+answers.join('\n\n'),model:get('aiModel')};
+   data={content:'# NASKAH SOAL\n\n'+questionParts.join('\n\n')+'\n\n---\n\n# KUNCI JAWABAN DAN PEMBAHASAN\n\n'+answerParts.join('\n\n'),model:get('aiModel')};
    localStorage.removeItem(checkpointKey);
   }else{
    data=await requestAI();
