@@ -21,6 +21,20 @@ pre{white-space:pre-wrap;font:13px/1.75 system-ui;background:#f8fafc;padding:20p
 .note{font-size:12px;color:#647e93;background:#eaf4f6;padding:14px;border-radius:10px;margin-top:16px}
 @media(max-width:850px){.wrap{display:block}aside{padding:13px}.logo{margin-bottom:14px}.nav{display:inline-block;width:auto;font-size:12px;padding:10px}.tip{display:none}main{padding:18px}.cols{grid-template-columns:1fr}}
 @media(max-width:560px){.grid{grid-template-columns:1fr 1fr}.wide{grid-column:span 2!important}h1{font-size:24px}.panel{padding:16px}}
+
+.paper{font-family:Calibri,Aptos,Arial,sans-serif;background:white;color:#182c40;border:1px solid #dae2ea;padding:26px 30px;max-height:670px;overflow:auto;font-size:11pt;line-height:1.5}
+.paper h2{font-size:13pt;color:#163957;margin:18px 0 8px}
+.paper h3{font-size:11.5pt;color:#234766;margin:14px 0 6px}
+.paper p{margin:6px 0;text-align:justify}
+.paper .letterhead{text-align:center;border-bottom:3px double #294661;padding:0 0 12px;margin-bottom:16px}
+.paper .letterhead strong{font-size:15pt}
+.paper .meta{width:100%;border-collapse:collapse;margin-bottom:20px;font-size:10pt}
+.paper .meta td{padding:4px}
+.paper .doc-table{border-collapse:collapse;width:100%;table-layout:fixed;margin:12px 0;font-size:10pt}
+.paper .doc-table td,.paper .doc-table th{border:1px solid #66798a;padding:7px;vertical-align:top;overflow-wrap:anywhere}
+.paper .doc-table th{background:#e9f0f6}
+.paper .disclaimer{border-top:1px solid #c4cdd5;padding-top:10px;margin-top:22px;font-size:9pt;color:#697989}
+@media print{@page{size:A4;margin:3cm}.paper{border:0;box-shadow:none;max-height:none;padding:0}}
 </style></head><body><div class="wrap"><aside>
 <div class="logo"><span>📘</span><div>ADMINISTRASI GURU<div class="sub">Portal Mandiri • Kurikulum Merdeka</div></div></div>
 <div id="nav"></div><div class="tip">🔐 Dokumen disimpan di browser perangkat. Fitur Ollama Cloud memerlukan internet dan backend terkonfigurasi. Draf perlu ditinjau sebelum digunakan.</div></aside>
@@ -43,8 +57,8 @@ pre{white-space:pre-wrap;font:13px/1.75 system-ui;background:#f8fafc;padding:20p
 <div class="actions"><button class="btn" id="generate">✨ Generate dengan Ollama AI</button><button class="btn secondary" id="template">📄 Gunakan Templat Offline</button><button class="btn secondary" id="testAI">🔌 Uji Koneksi AI</button><button class="btn secondary" id="exportAll">⬇ Cadangkan Data JSON</button><label style="display:inline-flex;align-items:center;gap:5px">📂 Impor Data <input type="file" accept=".json" id="import" style="width:170px"></label></div>
 <p class="note" id="notice">Pilih model dan isi URL backend serta kode akses. API key Ollama hanya berada di server. Jika belum dikonfigurasi, gunakan tombol Templat Offline. Semua hasil AI perlu diverifikasi guru.</p></section>
 <div class="cols"><section class="panel"><h2>📚 Dokumen Tersimpan</h2><div id="list"></div></section>
-<section class="panel"><h2>📄 Pratinjau & Edit</h2><div id="editor" style="display:none"><label>Judul<input id="docTitle"></label><label style="margin:12px 0">Konten dokumen<textarea id="docBody" style="min-height:310px"></textarea></label>
-<div class="actions"><button class="btn" id="save">💾 Simpan Edit</button><button class="btn secondary" id="word">⬇ Unduh Word (.doc)</button><button class="btn secondary" id="print">🖨 Cetak / PDF</button><button class="btn danger" id="delete">🗑 Hapus</button></div></div>
+<section class="panel"><h2>📄 Pratinjau & Edit</h2><div id="editor" style="display:none"><label>Judul<input id="docTitle"></label><div class="muted" style="margin:8px 0">Pratinjau cetak A4 • Edit isi dokumen di bawah.</div><div id="docPreview" class="paper"></div><details style="margin:14px 0"><summary>✏️ Edit teks dokumen</summary><textarea id="docBody" style="min-height:310px"></textarea></details>
+<div class="actions"><button class="btn" id="save">💾 Simpan Edit</button><button class="btn secondary" id="word">⬇ Word Terformat (.doc)</button><button class="btn secondary" id="print">🖨 Cetak / PDF</button><button class="btn danger" id="delete">🗑 Hapus</button></div></div>
 <div class="muted" id="empty">Belum ada dokumen. Buat dokumen untuk mulai bekerja.</div></section></div>
 </main></div>
 <script>
@@ -62,7 +76,69 @@ function refresh(){refreshNav();$('heading').textContent=section;$('kind').inner
  const filtered=docs.filter(d=>d.group===section);
  $('list').innerHTML=filtered.length?filtered.map(d=>'<div class="entry"><button data-open="'+safe(d.id)+'">'+safe(d.title)+'</button><span class="muted">'+safe(d.date)+'</span></div>').join(''):'<p class="muted">Belum ada dokumen di kategori ini.</p>';
  document.querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>{selected=b.dataset.open;refreshEditor()});refreshEditor()}
-function refreshEditor(){const d=docs.find(d=>d.id===selected);$('editor').style.display=d?'block':'none';$('empty').style.display=d?'none':'block';if(d){$('docTitle').value=d.title;$('docBody').value=d.body}}
+
+function inlineFormat(input){
+ return safe(input).replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>');
+}
+function blocks(content){
+ const rows=String(content||'').replace(/\r\n/g,'\n').split('\n');
+ let out=[],i=0;
+ while(i<rows.length){
+  const s=rows[i].trim();
+  if(!s){i++;continue}
+  if(s.startsWith('|')&&s.endsWith('|')){
+   let table=[];
+   while(i<rows.length&&rows[i].trim().startsWith('|')&&rows[i].trim().endsWith('|')){
+    table.push(rows[i].trim().slice(1,-1).split('|').map(x=>x.trim()));i++;
+   }
+   table=table.filter(row=>!row.every(cell=>/^:?-{2,}:?$/.test(cell)));
+   if(table.length){
+    const cols=table[0].length;
+    out.push('<table class="doc-table"><tr>'+table[0].map(x=>'<th>'+inlineFormat(x)+'</th>').join('')+'</tr>'+
+      table.slice(1).map(row=>'<tr>'+Array.from({length:cols},(_,j)=>'<td>'+inlineFormat(row[j]||'')+'</td>').join('')+'</tr>').join('')+'</table>');
+   }
+   continue;
+  }
+  if(s.startsWith('## ')){out.push('<h2>'+inlineFormat(s.slice(3))+'</h2>');i++;continue}
+  if(s.startsWith('### ')){out.push('<h3>'+inlineFormat(s.slice(4))+'</h3>');i++;continue}
+  if(s.startsWith('# ')){out.push('<h2>'+inlineFormat(s.slice(2))+'</h2>');i++;continue}
+  if(/^[A-Z][A-Z 0-9()\/:-]{3,}$/.test(s)&&s.length<100){out.push('<h2>'+inlineFormat(s)+'</h2>');i++;continue}
+  if(/^\d+[.)] /.test(s)||/^[-*] /.test(s)){
+   let numbered=/^\d+[.)] /.test(s),tag=numbered?'ol':'ul',items=[];
+   while(i<rows.length){
+    const line=rows[i].trim(),m=numbered?line.match(/^\d+[.)] (.*)$/):line.match(/^[-*] (.*)$/);
+    if(!m)break;items.push('<li>'+inlineFormat(m[1])+'</li>');i++;
+   }
+   out.push('<'+tag+'>'+items.join('')+'</'+tag+'>');continue;
+  }
+  out.push('<p>'+inlineFormat(s)+'</p>');i++;
+ }
+ return out.join('\n');
+}
+function formattedDoc(title,body,rec){
+ const school=rec&&rec.school||'SMA Islam Al-Ghozali';
+ const entries=[
+  ['Jenjang / Kelas',rec&&rec.level?rec.level+' / '+rec.grade:''],
+  ['Mata Pelajaran',rec&&rec.subject||''],
+  ['Materi / Bab',rec&&rec.topic||''],
+  ['Semester / Tahun Ajaran',rec&&rec.semester?rec.semester+' / '+rec.year:''],
+  ['Alokasi Waktu',rec&&rec.hours?rec.hours+' JP':'']
+ ];
+ const details=entries.filter(x=>x[1]).map(x=>'<tr><td width="38%">'+safe(x[0])+'</td><td>:</td><td>'+safe(x[1])+'</td></tr>').join('');
+ return '<div class="letterhead"><strong>'+safe(school)+'</strong><div>'+safe(title)+'</div><div>Kurikulum Merdeka</div></div><table class="meta">'+details+'</table>'+blocks(body)+
+ '<div class="disclaimer">Draf administrasi pembelajaran. Verifikasi isi, CP resmi, dan kesesuaian kebutuhan sekolah sebelum digunakan.</div>';
+}
+function refreshEditor(){
+ const d=docs.find(d=>d.id===selected);
+ $('editor').style.display=d?'block':'none';$('empty').style.display=d?'none':'block';
+ if(d){$('docTitle').value=d.title;$('docBody').value=d.body;refreshPreview()}
+}
+function refreshPreview(){
+ const d=docs.find(d=>d.id===selected);
+ if(d)$('docPreview').innerHTML=formattedDoc($('docTitle').value,$('docBody').value,d);
+}
+$('docTitle').addEventListener('input',refreshPreview);
+$('docBody').addEventListener('input',refreshPreview);
 function content(kind,subject,topic,grade,hours){
  const goal='Peserta didik mampu mengidentifikasi, menjelaskan, menerapkan, dan merefleksikan konsep '+topic+' dalam pembelajaran '+subject+'.';
  let blocks=[];
@@ -83,7 +159,7 @@ $('template').onclick=()=>{
  const topic=get('topic'),school=get('school'),subject=get('subject');if(!topic||!school||!subject){$('notice').textContent='⚠ Isi sekolah, mata pelajaran dan topik terlebih dahulu.';return}
  const kind=get('kind');const header=[kind.toUpperCase(),'Satuan Pendidikan: '+school,'Jenjang/Kelas: '+get('level')+' / '+get('grade'),'Mata Pelajaran: '+subject,'Topik/Bab: '+topic,'Semester: '+get('semester'),'Tahun Ajaran: '+get('year'),'Alokasi: '+get('hours')+' JP',''];
  const d={id:String(Date.now())+'-'+Math.random().toString(36).slice(2),group:section,title:kind+' — '+topic,date:new Date().toLocaleDateString('id-ID'),body:header.join('\n')+content(kind,subject,topic,get('grade'),get('hours'))};
- docs.unshift(d);selected=d.id;persist();refresh();$('notice').textContent='✓ Dokumen dibuat dan tersimpan pada perangkat ini.'};
+ Object.assign(d,{school:get('school'),level:get('level'),grade:get('grade'),subject:get('subject'),topic:get('topic'),semester:get('semester'),year:get('year'),hours:get('hours')});docs.unshift(d);selected=d.id;persist();refresh();$('notice').textContent='✓ Dokumen dibuat dan tersimpan pada perangkat ini.'};
 const modelNames=["kimi-k3.1-pro:cloud","deepseek-v4.1-flash:cloud","deepseek-v4.1-flash:1017-cloud","glm-5.3-flash:cloud","inkling-2-small:cloud","beam:cloud","minimax-m3.1-flash:cloud","muse-spark-open:cloud","clef:cloud","clef:27b-cloud","kimi-k3:cloud","nemotron-3-ultra:cloud","mimo-v2.6-flash:cloud","mimo-v2.6-pro:cloud"];
 const defaultBackend=location.hostname.endsWith('.vercel.app') ? location.origin : '';
 $('apiUrl').value=localStorage.getItem('administrasi-guru-ai-backend')||defaultBackend;
@@ -128,7 +204,7 @@ $('generate').onclick=async()=>{
   if(!data.content||typeof data.content!=='string')throw Error('Respons AI kosong.');
   const title=get('kind')+' — '+get('topic');
   const d={id:String(Date.now())+'-'+Math.random().toString(36).slice(2),group:section,title,date:new Date().toLocaleDateString('id-ID'),body:data.content,model:data.model||get('aiModel')};
-  docs.unshift(d);selected=d.id;persist();refresh();
+  Object.assign(d,{school:get('school'),level:get('level'),grade:get('grade'),subject:get('subject'),topic:get('topic'),semester:get('semester'),year:get('year'),hours:get('hours')});docs.unshift(d);selected=d.id;persist();refresh();
   $('notice').textContent='✓ Dokumen dibuat menggunakan '+d.model+' dan disimpan pada perangkat. Mohon tinjau isi sebelum digunakan.';
  }catch(e){$('notice').textContent='⚠ Gagal membuat dokumen AI: '+(e.name==='AbortError'?'Permintaan melewati batas waktu.':e.message)}
  finally{$('generate').disabled=false;$('generate').textContent='✨ Generate dengan Ollama AI'}
@@ -136,8 +212,22 @@ $('generate').onclick=async()=>{
 
 $('save').onclick=()=>{const d=docs.find(d=>d.id===selected);if(!d)return;d.title=get('docTitle');d.body=$('docBody').value;persist();refresh();$('notice').textContent='✓ Perubahan disimpan.'};
 function download(blob,name){let u=URL.createObjectURL(blob),a=document.createElement('a');a.href=u;a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),1000)}
-$('word').onclick=()=>{let d=docs.find(d=>d.id===selected);if(!d)return;let html='<html><head><meta charset="utf-8"></head><body style="font-family:Calibri,Arial;font-size:11pt;line-height:1.3">'+safe($('docBody').value).replace(/\n/g,'<br>')+'</body></html>';download(new Blob(['\ufeff',html],{type:'application/msword'}),(get('docTitle')||'dokumen').replace(/[\\/:*?"<>|]/g,'_')+'.doc')};
-$('print').onclick=()=>{let w=window.open('','_blank');if(!w){alert('Izinkan pop-up untuk mencetak dokumen.');return}w.document.write('<html><head><title>Dokumen Guru</title></head><body style="font-family:Arial;white-space:pre-wrap;line-height:1.6;padding:30px">'+safe($('docBody').value)+'</body></html>');w.document.close();w.print()};
+
+function wordPage(){
+ const d=docs.find(d=>d.id===selected);
+ const style='@page{size:A4;margin:3cm}body{font:11pt/1.5 Calibri,Aptos,Arial;color:#192d42}.letterhead{text-align:center;border-bottom:3px double #294661;padding-bottom:12pt;margin-bottom:16pt}.letterhead strong{font-size:15pt}.meta{width:100%;margin-bottom:20pt}h2{font-size:13pt;color:#163957;margin-top:17pt}h3{font-size:11.5pt}p{text-align:justify;margin:6pt 0}.doc-table{border-collapse:collapse;width:100%}.doc-table td,.doc-table th{border:1px solid #66798a;padding:7pt}.doc-table th{background:#e9f0f6}.disclaimer{font-size:9pt;border-top:1px solid #ccc;padding-top:10pt;margin-top:22pt}';
+ return '<html><head><meta charset="UTF-8"><style>'+style+'</style></head><body>'+formattedDoc($('docTitle').value,$('docBody').value,d)+'</body></html>';
+}
+$('word').onclick=()=>{
+ if(!selected)return;
+ download(new Blob(['\ufeff',wordPage()],{type:'application/msword;charset=utf-8'}),(get('docTitle')||'dokumen').replace(/[\\/:*?"<>|]/g,'_')+'.doc');
+};
+$('print').onclick=()=>{
+ if(!selected)return;
+ const w=window.open('','_blank');
+ if(!w){alert('Izinkan pop-up untuk mencetak dokumen.');return}
+ w.document.write(wordPage());w.document.close();w.focus();w.print();
+};
 $('delete').onclick=()=>{if(!selected||!confirm('Hapus dokumen ini?'))return;docs=docs.filter(d=>d.id!==selected);selected=null;persist();refresh()};
 $('exportAll').onclick=()=>download(new Blob([JSON.stringify(docs,null,2)],{type:'application/json'}),'cadangan-administrasi-guru.json');
 $('import').onchange=async e=>{let f=e.target.files[0];if(!f)return;try{let parsed=JSON.parse(await f.text());if(!Array.isArray(parsed)||!parsed.every(x=>x.id&&x.group&&x.body))throw Error();if(confirm('Impor '+parsed.length+' dokumen ke dalam daftar?')){docs=[...parsed,...docs.filter(d=>!parsed.some(p=>p.id===d.id))];persist();refresh()}}catch{alert('Format file JSON tidak cocok.')}e.target.value=''};
