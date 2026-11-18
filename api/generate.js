@@ -59,6 +59,7 @@ export default async function handler(req, res) {
     if(!assessment || typeof assessment!=='object')return fail(res,400,'Parameter asesmen tidak valid.');
     const expected=assessmentTypes.map(([key])=>assessment[key]);
     if(expected.some(v=>!Number.isSafeInteger(v)||v<0))return fail(res,400,'Jumlah soal harus bilangan bulat tidak negatif.');
+    if(body.level!=='SMP' && assessment.salahBenar!==0)return fail(res,400,'PG Salah–Benar hanya tersedia untuk jenjang SMP.');
     if(!['A-C','A-D','A-E'].includes(assessment.opsi))return fail(res,400,'Rentang opsi jawaban tidak valid.');
     const total=expected.reduce((sum,v)=>sum+v,0);
     if(total<1||total!==assessment.total)return fail(res,400,'Total soal tidak sama dengan jumlah komponennya.');
@@ -88,7 +89,7 @@ export default async function handler(req, res) {
     "Untuk Kisi-kisi, KKTP dan Rubrik buat tabel berisi indikator, level kognitif, teknik asesmen, kriteria dan skor terperinci.",
     "Untuk Instrumen Soal ikuti parameter jumlah tiap jenis soal secara tepat. Jika ada GENERASI BERTAHAP, buat HANYA jumlah dan jenis yang diminta di batch, gunakan nomor asli yang diminta, jangan ulang dari 1. Setiap soal harus unik, jelas dan dapat dijawab. Setelah soal dalam batch beri kunci serta pembahasan untuk nomor batch tersebut.",
     "PG biasa dan PG TKA WAJIB memakai rentang opsi tepat sesuai input: A-C berarti A, B, C; A-D berarti A, B, C, D; A-E berarti A, B, C, D, E. Jangan menambahkan pilihan di luar rentang.",
-    "PG TKA menekankan penalaran tingkat tinggi dan konteks stimulus. PG Salah–Benar mempunyai pernyataan yang harus diklasifikasikan Benar atau Salah. Esai TKA menekankan analisis/evaluasi mendalam, berbeda dari Esai biasa.",
+    "PG TKA menekankan penalaran tingkat tinggi dan konteks stimulus. PG Salah–Benar hanya boleh dibuat jika jenjang SMP, berupa pernyataan yang diklasifikasikan Benar atau Salah. Esai TKA menekankan analisis/evaluasi mendalam, berbeda dari Esai biasa.",
     "Bila jenis dokumen administrasi asesmen selain instrumen soal, gunakan komposisi soal yang diberikan untuk membuat kisi-kisi, KKTP atau rubrik selaras dengan jenis dan jumlah butir.",
     "Untuk remedial dan pengayaan buat pemetaan kesulitan, tahapan layanan, kegiatan, indikator evaluasi dan bukti tindak lanjut.",
     "Gunakan bahasa Indonesia formal, contoh relevan sesuai mapel, dan rincian yang siap dikoreksi guru, bukan kalimat umum saja.",
