@@ -74,6 +74,7 @@ pre{white-space:pre-wrap;font:13px/1.75 system-ui;background:#f8fafc;padding:20p
 <div class="assessment-total">Total soal: <strong id="totalQuestions">40</strong> butir</div>
 </div>
 <div class="actions"><button class="btn" id="generate">✨ Generate dengan Ollama AI</button><button class="btn secondary" id="template">📄 Gunakan Templat Offline</button><button class="btn secondary" id="exportAll">⬇ Cadangkan Data JSON</button><label style="display:inline-flex;align-items:center;gap:5px">📂 Impor Data <input type="file" accept=".json" id="import" style="width:170px"></label></div>
+<p class="note" id="aiHealth">🔎 Memeriksa backend AI…</p>
 <p class="note" id="notice">Cukup isi jenjang, kelas, mata pelajaran, topik, dan jenis dokumen. Klik Generate dengan AI. API key tersimpan aman di server; hasil tetap perlu diverifikasi guru.</p></section>
 <div class="cols"><section class="panel"><h2>📚 Dokumen Tersimpan</h2><div id="list"></div></section>
 <section class="panel"><h2>📄 Pratinjau & Edit</h2><div id="editor" style="display:none"><label>Judul<input id="docTitle"></label><div class="muted" style="margin:8px 0">Pratinjau cetak A4 • Edit isi dokumen di bawah.</div><div id="docPreview" class="paper"></div><details style="margin:14px 0"><summary>✏️ Edit teks dokumen</summary><textarea id="docBody" style="min-height:310px"></textarea></details>
@@ -196,6 +197,7 @@ function assessmentConfig(){
 }
 function updateQuestionTotal(){
  const isSmp=get('level')==='SMP';
+ $('assessmentSettings').dataset.level=get('level');
  $('trueFalseField').style.display=isSmp?'flex':'none';
  $('countTrueFalse').disabled=!isSmp;
  if(!isSmp)$('countTrueFalse').value='0';
@@ -210,6 +212,19 @@ const defaultBackend=location.hostname.endsWith('.vercel.app') ? location.origin
 function aiEndpoint(){
  return defaultBackend+'/api/generate';
 }
+async function checkBackend(){
+ const element=$('aiHealth');
+ element.textContent='🔎 Memeriksa layanan AI…';
+ try{
+  const response=await fetch(aiEndpoint()+'?health=1',{method:'GET',cache:'no-store'});
+  const raw=await response.text();
+  let data;try{data=JSON.parse(raw)}catch{throw Error(response.status===401||response.status===403?'Akses dilindungi oleh Vercel. Login ke Vercel atau periksa Deployment Protection.':'Backend belum mengembalikan JSON. Status HTTP '+response.status);}
+  if(!response.ok)throw Error(data.error||'HTTP '+response.status);
+  if(!data.configured)throw Error('OLLAMA_API_KEY belum tersedia di runtime Vercel.');
+  element.textContent='✅ Backend aktif. Ollama Cloud siap diminta; ketersediaan model diperiksa ketika Generate.';
+ }catch(error){element.textContent='⚠ Backend AI belum siap: '+error.message;}
+}
+checkBackend();
 function checkRequired(){
  if(!get('topic')||!get('school')||!get('subject'))throw Error('Isi sekolah, mata pelajaran, dan topik/materi.');
 }
@@ -219,7 +234,8 @@ async function requestAI(batch=null){
  try {
   const payload={model:get('aiModel'),section,kind:get('kind'),school:get('school'),level:get('level'),grade:get('grade'),subject:get('subject'),topic:get('topic'),semester:get('semester'),year:get('year'),hours:get('hours'),assessment:section==='Administrasi Asesmen'?assessmentConfig():null,batch};
   const response=await fetch(aiEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload),signal:controller.signal});
-  const data=await response.json().catch(()=>({}));
+  const raw=await response.text();
+  let data;try{data=JSON.parse(raw)}catch{throw Error(response.status===401||response.status===403?'Vercel meminta autentikasi tambahan pada backend.':'Respons backend bukan JSON (HTTP '+response.status+'). Periksa Deployment Protection atau fungsi server.' )}
   if(!response.ok)throw Error(data.error||'Layanan AI gagal: HTTP '+response.status);
   return data;
  }finally{clearTimeout(timer)}
