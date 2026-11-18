@@ -41,6 +41,7 @@ export default async function handler(req, res) {
   const origin = req.headers.origin || '';
   setHeaders(res, origin);
   if (req.method === 'OPTIONS') return res.status(originAllowed(origin) ? 204 : 403).end();
+  if (req.method === 'GET' && req.query?.health === '1') return res.status(200).json({ok:true, configured:Boolean(process.env.OLLAMA_API_KEY), service:'Administrasi Guru Ollama Cloud'});
   if (req.method !== 'POST') return fail(res, 405, 'Metode tidak didukung.');
   if (origin && !originAllowed(origin)) return fail(res, 403, 'Origin tidak diizinkan.');
 
