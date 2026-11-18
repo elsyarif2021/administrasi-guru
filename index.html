@@ -35,6 +35,12 @@ pre{white-space:pre-wrap;font:13px/1.75 system-ui;background:#f8fafc;padding:20p
 .paper .doc-table th{background:#e9f0f6}
 .paper .disclaimer{border-top:1px solid #c4cdd5;padding-top:10px;margin-top:22px;font-size:9pt;color:#697989}
 @media print{@page{size:A4;margin:3cm}.paper{border:0;box-shadow:none;max-height:none;padding:0}}
+
+.assessment-settings{margin-top:6px;padding:18px;border:1px solid #c9e7e3;background:#f1fbf9;border-radius:12px}
+.assessment-settings h3{margin:0 0 7px;color:#175c59;font-size:16px}
+.assessment-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:13px;margin-top:14px}
+.assessment-total{margin-top:14px;font-size:14px;font-weight:650;color:#126c66}
+@media(max-width:600px){.assessment-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 </style></head><body><div class="wrap"><aside>
 <div class="logo"><span>📘</span><div>ADMINISTRASI GURU<div class="sub">Portal Mandiri • Kurikulum Merdeka</div></div></div>
 <div id="nav"></div><div class="tip">🔐 Dokumen disimpan di browser perangkat. AI berjalan melalui server Vercel tanpa memasukkan token pada formulir. Periksa hasil AI sebelum digunakan.</div></aside>
@@ -54,6 +60,19 @@ pre{white-space:pre-wrap;font:13px/1.75 system-ui;background:#f8fafc;padding:20p
 <label>Tahun ajaran<input id="year" value="2026/2027"></label>
 <label>Alokasi waktu (JP)<input id="hours" type="number" min="1" value="4"></label>
 </div>
+<div id="assessmentSettings" class="assessment-settings" style="display:none">
+<h3>⚙️ Parameter Jumlah Soal Asesmen</h3>
+<p class="muted">Isi jumlah tiap jenis soal. Total dihitung otomatis dan dikirim ke AI.</p>
+<div class="assessment-grid">
+<label>PG Biasa<input id="countPG" type="number" min="0" step="1" value="20"></label>
+<label>PG TKA<input id="countTKA" type="number" min="0" step="1" value="10"></label>
+<label>PG Salah–Benar<input id="countTrueFalse" type="number" min="0" step="1" value="5"></label>
+<label>Esai<input id="countEssay" type="number" min="0" step="1" value="3"></label>
+<label>Esai TKA<input id="countEssayTKA" type="number" min="0" step="1" value="2"></label>
+<label>Opsi Jawaban PG<select id="answerOptions"><option value="A-C">A–C (3 opsi)</option><option value="A-D">A–D (4 opsi)</option><option value="A-E" selected>A–E (5 opsi)</option></select></label>
+</div>
+<div class="assessment-total">Total soal: <strong id="totalQuestions">40</strong> butir</div>
+</div>
 <div class="actions"><button class="btn" id="generate">✨ Generate dengan Ollama AI</button><button class="btn secondary" id="template">📄 Gunakan Templat Offline</button><button class="btn secondary" id="exportAll">⬇ Cadangkan Data JSON</button><label style="display:inline-flex;align-items:center;gap:5px">📂 Impor Data <input type="file" accept=".json" id="import" style="width:170px"></label></div>
 <p class="note" id="notice">Cukup isi jenjang, kelas, mata pelajaran, topik, dan jenis dokumen. Klik Generate dengan AI. API key tersimpan aman di server; hasil tetap perlu diverifikasi guru.</p></section>
 <div class="cols"><section class="panel"><h2>📚 Dokumen Tersimpan</h2><div id="list"></div></section>
@@ -72,7 +91,7 @@ function persist(){localStorage.setItem(key,JSON.stringify(docs))}
 function safe(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
 function refreshNav(){ $('nav').innerHTML=Object.keys(groups).map(g=>'<button class="nav '+(g===section?'active':'')+'" data-group="'+safe(g)+'">'+safe(g)+'</button>').join('');
  document.querySelectorAll('[data-group]').forEach(b=>b.onclick=()=>{section=b.dataset.group;selected=null;refresh()}) }
-function refresh(){refreshNav();$('heading').textContent=section;$('kind').innerHTML=groups[section].map(k=>'<option>'+safe(k)+'</option>').join('');
+function refresh(){refreshNav();$('assessmentSettings').style.display=section==='Administrasi Asesmen'?'block':'none';$('heading').textContent=section;$('kind').innerHTML=groups[section].map(k=>'<option>'+safe(k)+'</option>').join('');
  const filtered=docs.filter(d=>d.group===section);
  $('list').innerHTML=filtered.length?filtered.map(d=>'<div class="entry"><button data-open="'+safe(d.id)+'">'+safe(d.title)+'</button><span class="muted">'+safe(d.date)+'</span></div>').join(''):'<p class="muted">Belum ada dokumen di kategori ini.</p>';
  document.querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>{selected=b.dataset.open;refreshEditor()});refreshEditor()}
@@ -159,8 +178,27 @@ $('template').onclick=()=>{
  const topic=get('topic'),school=get('school'),subject=get('subject');if(!topic||!school||!subject){$('notice').textContent='⚠ Isi sekolah, mata pelajaran dan topik terlebih dahulu.';return}
  const kind=get('kind');const header=[kind.toUpperCase(),'Satuan Pendidikan: '+school,'Jenjang/Kelas: '+get('level')+' / '+get('grade'),'Mata Pelajaran: '+subject,'Topik/Bab: '+topic,'Semester: '+get('semester'),'Tahun Ajaran: '+get('year'),'Alokasi: '+get('hours')+' JP',''];
  const d={id:String(Date.now())+'-'+Math.random().toString(36).slice(2),group:section,title:kind+' — '+topic,date:new Date().toLocaleDateString('id-ID'),body:header.join('\n')+content(kind,subject,topic,get('grade'),get('hours'))};
- Object.assign(d,{school:get('school'),level:get('level'),grade:get('grade'),subject:get('subject'),topic:get('topic'),semester:get('semester'),year:get('year'),hours:get('hours')});docs.unshift(d);selected=d.id;persist();refresh();$('notice').textContent='✓ Dokumen dibuat dan tersimpan pada perangkat ini.'};
+ Object.assign(d,{school:get('school'),level:get('level'),grade:get('grade'),subject:get('subject'),topic:get('topic'),semester:get('semester'),year:get('year'),hours:get('hours'),assessment:section==='Administrasi Asesmen'?assessmentConfig():null});docs.unshift(d);selected=d.id;persist();refresh();$('notice').textContent='✓ Dokumen dibuat dan tersimpan pada perangkat ini.'};
 const modelNames=["kimi-k3.1-pro:cloud","deepseek-v4.1-flash:cloud","deepseek-v4.1-flash:1017-cloud","glm-5.3-flash:cloud","inkling-2-small:cloud","beam:cloud","minimax-m3.1-flash:cloud","muse-spark-open:cloud","clef:cloud","clef:27b-cloud","kimi-k3:cloud","nemotron-3-ultra:cloud","mimo-v2.6-flash:cloud","mimo-v2.6-pro:cloud"];
+
+
+const assessmentFields=['countPG','countTKA','countTrueFalse','countEssay','countEssayTKA'];
+function assessmentConfig(){
+ const values=assessmentFields.map(id=>{
+  const number=Number($(id).value);
+  if(!Number.isSafeInteger(number)||number<0)throw Error('Jumlah soal harus berupa bilangan bulat tidak negatif.');
+  return number;
+ });
+ const total=values.reduce((a,c)=>a+c,0);
+ if(total===0)throw Error('Isi minimal satu jenis soal.');
+ return {pg:values[0],pgTka:values[1],salahBenar:values[2],esai:values[3],esaiTka:values[4],total,opsi:get('answerOptions')};
+}
+function updateQuestionTotal(){
+ const values=assessmentFields.map(id=>Number($(id).value));
+ $('totalQuestions').textContent=values.every(n=>Number.isSafeInteger(n)&&n>=0)?values.reduce((a,n)=>a+n,0):'Periksa input';
+}
+assessmentFields.forEach(id=>$(id).addEventListener('input',updateQuestionTotal));
+updateQuestionTotal();
 
 const defaultBackend=location.hostname.endsWith('.vercel.app') ? location.origin : 'https://administrasi-guru-delta.vercel.app';
 function aiEndpoint(){
@@ -169,11 +207,11 @@ function aiEndpoint(){
 function checkRequired(){
  if(!get('topic')||!get('school')||!get('subject'))throw Error('Isi sekolah, mata pelajaran, dan topik/materi.');
 }
-async function requestAI(){
+async function requestAI(batch=null){
  const controller=new AbortController();
  const timer=setTimeout(()=>controller.abort(),110000);
  try {
-  const payload={model:get('aiModel'),section,kind:get('kind'),school:get('school'),level:get('level'),grade:get('grade'),subject:get('subject'),topic:get('topic'),semester:get('semester'),year:get('year'),hours:get('hours')};
+  const payload={model:get('aiModel'),section,kind:get('kind'),school:get('school'),level:get('level'),grade:get('grade'),subject:get('subject'),topic:get('topic'),semester:get('semester'),year:get('year'),hours:get('hours'),assessment:section==='Administrasi Asesmen'?assessmentConfig():null,batch};
   const response=await fetch(aiEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload),signal:controller.signal});
   const data=await response.json().catch(()=>({}));
   if(!response.ok)throw Error(data.error||'Layanan AI gagal: HTTP '+response.status);
@@ -181,14 +219,35 @@ async function requestAI(){
  }finally{clearTimeout(timer)}
 }
 $('generate').onclick=async()=>{
- try{checkRequired();if(!modelNames.includes(get('aiModel')))throw Error('Model tidak valid.')}catch(e){$('notice').textContent='⚠ '+e.message;return}
+ try{checkRequired();if(!modelNames.includes(get('aiModel')))throw Error('Model tidak valid.');if(section==='Administrasi Asesmen')assessmentConfig();}catch(e){$('notice').textContent='⚠ '+e.message;return}
  $('generate').disabled=true;$('generate').textContent='⏳ Memproses melalui Ollama Cloud...';$('notice').textContent='Menghasilkan dokumen dari Ollama Cloud. Jangan tutup halaman.';
  try{
-  const data=await requestAI();
+  let data;
+  if(section==='Administrasi Asesmen'&&get('kind')==='Instrumen Soal'){
+   const config=assessmentConfig();
+   const types=[['PG Biasa',config.pg],['PG TKA',config.pgTka],['PG Salah–Benar',config.salahBenar],['Esai',config.esai],['Esai TKA',config.esaiTka]];
+   const parts=[];
+   let processed=0;
+   for(const [type,amount] of types){
+    if(!amount)continue;
+    parts.push('## '+type);
+    for(let start=1;start<=amount;start+=8){
+     const count=Math.min(8,amount-start+1);
+     $('notice').textContent='Menyusun '+type+' nomor '+start+'–'+(start+count-1)+' dari '+amount+' (total '+processed+'/'+config.total+')…';
+     const chunk=await requestAI({type,start,count});
+     if(!chunk.content||typeof chunk.content!=='string')throw Error('Respons kosong pada '+type+' nomor '+start);
+     parts.push(chunk.content);
+     processed+=count;
+    }
+   }
+   data={content:parts.join('\n\n'),model:get('aiModel')};
+  }else{
+   data=await requestAI();
+  }
   if(!data.content||typeof data.content!=='string')throw Error('Respons AI kosong.');
   const title=get('kind')+' — '+get('topic');
   const d={id:String(Date.now())+'-'+Math.random().toString(36).slice(2),group:section,title,date:new Date().toLocaleDateString('id-ID'),body:data.content,model:data.model||get('aiModel')};
-  Object.assign(d,{school:get('school'),level:get('level'),grade:get('grade'),subject:get('subject'),topic:get('topic'),semester:get('semester'),year:get('year'),hours:get('hours')});docs.unshift(d);selected=d.id;persist();refresh();
+  Object.assign(d,{school:get('school'),level:get('level'),grade:get('grade'),subject:get('subject'),topic:get('topic'),semester:get('semester'),year:get('year'),hours:get('hours'),assessment:section==='Administrasi Asesmen'?assessmentConfig():null});docs.unshift(d);selected=d.id;persist();refresh();
   $('notice').textContent='✓ Dokumen dibuat menggunakan '+d.model+' dan disimpan pada perangkat. Mohon tinjau isi sebelum digunakan.';
  }catch(e){$('notice').textContent='⚠ Gagal membuat dokumen AI: '+(e.name==='AbortError'?'Permintaan melewati batas waktu.':e.message)}
  finally{$('generate').disabled=false;$('generate').textContent='✨ Generate dengan Ollama AI'}
