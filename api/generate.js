@@ -16,7 +16,6 @@ const ALLOWED_MODELS = new Set([
 ]);
 const MAX_BODY_BYTES = 18000;
 const MAX_INPUT = 2000;
-const requests = new Map();
 
 function originAllowed(origin) {
   const configured = (process.env.ALLOWED_ORIGINS || '').split(',').map(s => s.trim()).filter(Boolean);
@@ -46,20 +45,6 @@ export default async function handler(req, res) {
   if (origin && !originAllowed(origin)) return fail(res, 403, 'Origin tidak diizinkan.');
 
   if (!process.env.OLLAMA_API_KEY) return fail(res, 503, 'OLLAMA_API_KEY belum dikonfigurasi di Vercel.');
-  // Best-effort per-instance throttle; for a public launch enable persistent rate
-  // limiting, bot controls, and budget limits in the Vercel firewall.
-  const forwarded = String(req.headers['x-forwarded-for'] || '').split(',')[0].trim();
-  const ip = forwarded || req.socket?.remoteAddress || 'unknown';
-  const now = Date.now();
-  const windowMs = 60 * 60 * 1000;
-  const bucket = requests.get(ip) || {start: now, count: 0};
-  if(now-bucket.start>=windowMs){bucket.start=now;bucket.count=0;}
-  if(bucket.count>=8)return fail(res,429,'Batas 8 permintaan AI per jam tercapai. Coba lagi nanti.');
-  bucket.count++;
-  requests.set(ip,bucket);
-  if(requests.size>2000){
-    for(const [addr,entry] of requests){if(now-entry.start>=windowMs)requests.delete(addr);}
-  }
   const body = typeof req.body === 'object' && req.body ? req.body : {};
   if (JSON.stringify(body).length > MAX_BODY_BYTES) return fail(res, 413, 'Permintaan terlalu besar.');
   if (body.ping === true) return res.status(200).json({ok:true});
