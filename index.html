@@ -248,21 +248,29 @@ $('generate').onclick=async()=>{
   if(section==='Administrasi Asesmen'&&get('kind')==='Instrumen Soal'){
    const config=assessmentConfig();
    const types=[['PG Biasa',config.pg],['PG TKA',config.pgTka],['PG Salah–Benar',config.salahBenar],['Esai',config.esai],['Esai TKA',config.esaiTka]];
-   const parts=[];
-   let processed=0;
+   const questionParts=[],answerParts=[];
+   let processed=0,globalNumber=1;
    for(const [type,amount] of types){
     if(!amount)continue;
-    parts.push('## '+type);
-    for(let start=1;start<=amount;start+=8){
-     const count=Math.min(8,amount-start+1);
-     $('notice').textContent='Menyusun '+type+' nomor '+start+'–'+(start+count-1)+' dari '+amount+' (total '+processed+'/'+config.total+')…';
-     const chunk=await requestAI({type,start,count});
-     if(!chunk.content||typeof chunk.content!=='string')throw Error('Respons kosong pada '+type+' nomor '+start);
-     parts.push(chunk.content);
+    questionParts.push('## '+type);
+    answerParts.push('### '+type);
+    for(let offset=0;offset<amount;offset+=8){
+     const count=Math.min(8,amount-offset);
+     const start=globalNumber+offset;
+     const finish=start+count-1;
+     $('notice').textContent='Membuat SOAL '+type+' nomor '+start+'–'+finish+' ('+processed+'/'+config.total+')…';
+     const questions=await requestAI({type,start,count,phase:'questions'});
+     if(!questions.content||typeof questions.content!=='string')throw Error('Soal kosong: '+type+' nomor '+start+'–'+finish);
+     questionParts.push(questions.content.trim());
+     $('notice').textContent='Membuat KUNCI & PEMBAHASAN '+type+' nomor '+start+'–'+finish+'…';
+     const answers=await requestAI({type,start,count,phase:'answers',questions:questions.content});
+     if(!answers.content||typeof answers.content!=='string')throw Error('Kunci jawaban kosong: '+type+' nomor '+start+'–'+finish);
+     answerParts.push(answers.content.trim());
      processed+=count;
     }
+    globalNumber+=amount;
    }
-   data={content:parts.join('\n\n'),model:get('aiModel')};
+   data={content:'# NASKAH SOAL\n\n'+questionParts.join('\n\n')+'\n\n---\n\n# KUNCI JAWABAN DAN PEMBAHASAN\n\n'+answerParts.join('\n\n'),model:get('aiModel')};
   }else{
    data=await requestAI();
   }
