@@ -37,14 +37,14 @@ pre{white-space:pre-wrap;font:13px/1.75 system-ui;background:#f8fafc;padding:20p
 @media print{@page{size:A4;margin:3cm}.paper{border:0;box-shadow:none;max-height:none;padding:0}}
 </style></head><body><div class="wrap"><aside>
 <div class="logo"><span>📘</span><div>ADMINISTRASI GURU<div class="sub">Portal Mandiri • Kurikulum Merdeka</div></div></div>
-<div id="nav"></div><div class="tip">🔐 Dokumen disimpan di browser perangkat. Fitur Ollama Cloud memerlukan internet dan backend terkonfigurasi. Draf perlu ditinjau sebelum digunakan.</div></aside>
+<div id="nav"></div><div class="tip">🔐 Dokumen disimpan di browser perangkat. AI berjalan melalui server Vercel tanpa memasukkan token pada formulir. Periksa hasil AI sebelum digunakan.</div></aside>
 <main><div class="kicker">WORKSPACE GURU</div><h1 id="heading">Rencana Pembelajaran</h1><div class="muted">Isi identitas, hasilkan draf administrasi, edit, simpan, dan ekspor ke Microsoft Word.</div>
 <section class="panel"><h2>✨ Generator Dokumen</h2><div class="muted">Formulir singkat dengan templat draf yang berbeda untuk setiap jenis dokumen.</div>
 <div class="grid">
 <label class="wide">Jenis dokumen<select id="kind"></select></label>
-<label class="wide">Model Ollama Cloud<select id="aiModel"><option value="kimi-k3.1-pro:cloud">kimi-k3.1-pro:cloud</option><option value="deepseek-v4.1-flash:cloud" selected>deepseek-v4.1-flash:cloud</option><option value="deepseek-v4.1-flash:1017-cloud">deepseek-v4.1-flash:1017-cloud</option><option value="glm-5.3-flash:cloud">glm-5.3-flash:cloud</option><option value="inkling-2-small:cloud">inkling-2-small:cloud</option><option value="beam:cloud">beam:cloud</option><option value="minimax-m3.1-flash:cloud">minimax-m3.1-flash:cloud</option><option value="muse-spark-open:cloud">muse-spark-open:cloud</option><option value="clef:cloud">clef:cloud</option><option value="clef:27b-cloud">clef:27b-cloud</option><option value="kimi-k3:cloud">kimi-k3:cloud</option><option value="nemotron-3-ultra:cloud">nemotron-3-ultra:cloud</option><option value="mimo-v2.6-flash:cloud">mimo-v2.6-flash:cloud</option><option value="mimo-v2.6-pro:cloud">mimo-v2.6-pro:cloud</option></select></label>
-<label class="wide">URL Backend AI (Vercel)<input id="apiUrl" placeholder="https://nama-proyek.vercel.app" autocomplete="url"></label>
-<label class="wide">Kode akses AI (tidak disimpan di repository)<input id="accessToken" type="password" placeholder="Kode akses dari pengelola backend" autocomplete="off"></label>
+<label class="wide">Model AI (opsional — bawaan DeepSeek Flash)<select id="aiModel"><option value="kimi-k3.1-pro:cloud">kimi-k3.1-pro:cloud</option><option value="deepseek-v4.1-flash:cloud" selected>deepseek-v4.1-flash:cloud</option><option value="deepseek-v4.1-flash:1017-cloud">deepseek-v4.1-flash:1017-cloud</option><option value="glm-5.3-flash:cloud">glm-5.3-flash:cloud</option><option value="inkling-2-small:cloud">inkling-2-small:cloud</option><option value="beam:cloud">beam:cloud</option><option value="minimax-m3.1-flash:cloud">minimax-m3.1-flash:cloud</option><option value="muse-spark-open:cloud">muse-spark-open:cloud</option><option value="clef:cloud">clef:cloud</option><option value="clef:27b-cloud">clef:27b-cloud</option><option value="kimi-k3:cloud">kimi-k3:cloud</option><option value="nemotron-3-ultra:cloud">nemotron-3-ultra:cloud</option><option value="mimo-v2.6-flash:cloud">mimo-v2.6-flash:cloud</option><option value="mimo-v2.6-pro:cloud">mimo-v2.6-pro:cloud</option></select></label>
+
+
 <label>Nama sekolah<input id="school" value="SMA Islam Al-Ghozali"></label>
 <label>Jenjang<select id="level"><option>SMA</option><option>SD</option><option>SMP</option><option>SMK</option><option>MA</option><option>MTs</option></select></label>
 <label>Kelas<select id="grade"><option>X</option><option>XI</option><option>XII</option><option>VII</option><option>VIII</option><option>IX</option><option>I</option><option>II</option><option>III</option><option>IV</option><option>V</option><option>VI</option></select></label>
@@ -54,8 +54,8 @@ pre{white-space:pre-wrap;font:13px/1.75 system-ui;background:#f8fafc;padding:20p
 <label>Tahun ajaran<input id="year" value="2026/2027"></label>
 <label>Alokasi waktu (JP)<input id="hours" type="number" min="1" value="4"></label>
 </div>
-<div class="actions"><button class="btn" id="generate">✨ Generate dengan Ollama AI</button><button class="btn secondary" id="template">📄 Gunakan Templat Offline</button><button class="btn secondary" id="testAI">🔌 Uji Koneksi AI</button><button class="btn secondary" id="exportAll">⬇ Cadangkan Data JSON</button><label style="display:inline-flex;align-items:center;gap:5px">📂 Impor Data <input type="file" accept=".json" id="import" style="width:170px"></label></div>
-<p class="note" id="notice">Pilih model dan isi URL backend serta kode akses. API key Ollama hanya berada di server. Jika belum dikonfigurasi, gunakan tombol Templat Offline. Semua hasil AI perlu diverifikasi guru.</p></section>
+<div class="actions"><button class="btn" id="generate">✨ Generate dengan Ollama AI</button><button class="btn secondary" id="template">📄 Gunakan Templat Offline</button><button class="btn secondary" id="exportAll">⬇ Cadangkan Data JSON</button><label style="display:inline-flex;align-items:center;gap:5px">📂 Impor Data <input type="file" accept=".json" id="import" style="width:170px"></label></div>
+<p class="note" id="notice">Cukup isi jenjang, kelas, mata pelajaran, topik, dan jenis dokumen. Klik Generate dengan AI. API key tersimpan aman di server; hasil tetap perlu diverifikasi guru.</p></section>
 <div class="cols"><section class="panel"><h2>📚 Dokumen Tersimpan</h2><div id="list"></div></section>
 <section class="panel"><h2>📄 Pratinjau & Edit</h2><div id="editor" style="display:none"><label>Judul<input id="docTitle"></label><div class="muted" style="margin:8px 0">Pratinjau cetak A4 • Edit isi dokumen di bawah.</div><div id="docPreview" class="paper"></div><details style="margin:14px 0"><summary>✏️ Edit teks dokumen</summary><textarea id="docBody" style="min-height:310px"></textarea></details>
 <div class="actions"><button class="btn" id="save">💾 Simpan Edit</button><button class="btn secondary" id="word">⬇ Word Terformat (.doc)</button><button class="btn secondary" id="print">🖨 Cetak / PDF</button><button class="btn danger" id="delete">🗑 Hapus</button></div></div>
@@ -161,41 +161,25 @@ $('template').onclick=()=>{
  const d={id:String(Date.now())+'-'+Math.random().toString(36).slice(2),group:section,title:kind+' — '+topic,date:new Date().toLocaleDateString('id-ID'),body:header.join('\n')+content(kind,subject,topic,get('grade'),get('hours'))};
  Object.assign(d,{school:get('school'),level:get('level'),grade:get('grade'),subject:get('subject'),topic:get('topic'),semester:get('semester'),year:get('year'),hours:get('hours')});docs.unshift(d);selected=d.id;persist();refresh();$('notice').textContent='✓ Dokumen dibuat dan tersimpan pada perangkat ini.'};
 const modelNames=["kimi-k3.1-pro:cloud","deepseek-v4.1-flash:cloud","deepseek-v4.1-flash:1017-cloud","glm-5.3-flash:cloud","inkling-2-small:cloud","beam:cloud","minimax-m3.1-flash:cloud","muse-spark-open:cloud","clef:cloud","clef:27b-cloud","kimi-k3:cloud","nemotron-3-ultra:cloud","mimo-v2.6-flash:cloud","mimo-v2.6-pro:cloud"];
-const defaultBackend=location.hostname.endsWith('.vercel.app') ? location.origin : '';
-$('apiUrl').value=localStorage.getItem('administrasi-guru-ai-backend')||defaultBackend;
-$('accessToken').value=sessionStorage.getItem('administrasi-guru-ai-access')||'';
-$('apiUrl').onchange=()=>localStorage.setItem('administrasi-guru-ai-backend',get('apiUrl'));
-$('accessToken').onchange=()=>sessionStorage.setItem('administrasi-guru-ai-access',get('accessToken'));
+
+const defaultBackend=location.hostname.endsWith('.vercel.app') ? location.origin : 'https://administrasi-guru-delta.vercel.app';
 function aiEndpoint(){
- const base=get('apiUrl').replace(/\/+$/,'');
- if(!base)throw Error('Isi URL backend Vercel terlebih dahulu.');
- const url=new URL(base);
- if(url.protocol!=='https:' && !(url.hostname==='localhost'&&url.protocol==='http:'))throw Error('Backend harus menggunakan HTTPS.');
- return url.pathname.endsWith('/api/generate')?url.href:url.origin+'/api/generate';
+ return defaultBackend+'/api/generate';
 }
 function checkRequired(){
  if(!get('topic')||!get('school')||!get('subject'))throw Error('Isi sekolah, mata pelajaran, dan topik/materi.');
- if(!get('accessToken'))throw Error('Isi kode akses AI dari pengelola server.');
 }
-async function requestAI(test=false){
- const endpoint=aiEndpoint();
- if(!get('accessToken'))throw Error('Isi kode akses AI.');
+async function requestAI(){
  const controller=new AbortController();
  const timer=setTimeout(()=>controller.abort(),110000);
  try {
-  const payload=test?{ping:true}:{model:get('aiModel'),section,kind:get('kind'),school:get('school'),level:get('level'),grade:get('grade'),subject:get('subject'),topic:get('topic'),semester:get('semester'),year:get('year'),hours:get('hours')};
-  const response=await fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json','X-App-Access-Token':get('accessToken')},body:JSON.stringify(payload),signal:controller.signal});
+  const payload={model:get('aiModel'),section,kind:get('kind'),school:get('school'),level:get('level'),grade:get('grade'),subject:get('subject'),topic:get('topic'),semester:get('semester'),year:get('year'),hours:get('hours')};
+  const response=await fetch(aiEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload),signal:controller.signal});
   const data=await response.json().catch(()=>({}));
-  if(!response.ok)throw Error(data.error||'Backend merespons HTTP '+response.status);
+  if(!response.ok)throw Error(data.error||'Layanan AI gagal: HTTP '+response.status);
   return data;
  }finally{clearTimeout(timer)}
 }
-$('testAI').onclick=async()=>{
- $('testAI').disabled=true;$('notice').textContent='Menghubungkan backend...';
- try {await requestAI(true);$('notice').textContent='✓ Backend dan autentikasi berhasil diverifikasi. Model akan diuji saat generate.'}
- catch(e){$('notice').textContent='⚠ Uji koneksi gagal: '+e.message}
- finally{$('testAI').disabled=false}
-};
 $('generate').onclick=async()=>{
  try{checkRequired();if(!modelNames.includes(get('aiModel')))throw Error('Model tidak valid.')}catch(e){$('notice').textContent='⚠ '+e.message;return}
  $('generate').disabled=true;$('generate').textContent='⏳ Memproses melalui Ollama Cloud...';$('notice').textContent='Menghasilkan dokumen dari Ollama Cloud. Jangan tutup halaman.';
