@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Administrasi Guru — Portal Mandiri</title>
+<style>
+:root{font-family:system-ui,-apple-system,Segoe UI,sans-serif;color:#173149;background:#f3f7fb}*{box-sizing:border-box}
+body{margin:0}.wrap{display:grid;grid-template-columns:260px 1fr;min-height:100vh}
+aside{background:#11283e;color:white;padding:24px 17px}.logo{display:flex;gap:12px;align-items:center;font-size:17px;font-weight:800;margin-bottom:34px}
+.logo span{background:#13a99c;border-radius:12px;padding:12px}.sub{font-size:12px;color:#abc2d5;font-weight:500}
+.nav{display:block;background:transparent;color:#d0e1ef;border:0;border-radius:10px;text-align:left;padding:15px;width:100%;font-weight:650;cursor:pointer;margin-bottom:8px}
+.nav.active{background:#28506a;color:white}.tip{font-size:12px;line-height:1.6;color:#b3cada;border-top:1px solid #32506b;padding-top:15px;margin-top:40px}
+main{padding:32px;max-width:1300px;width:100%;margin:0 auto}h1{margin:7px 0;font-size:30px}
+.muted{color:#7a8c9c;font-size:13px}.kicker{font-size:11px;font-weight:800;color:#0c918c;letter-spacing:1px}
+.panel{background:white;border:1px solid #e0e9f0;box-shadow:0 7px 25px #17314908;border-radius:15px;padding:24px;margin-top:22px}
+h2{font-size:18px;margin:0 0 8px}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin:22px 0}
+label{font-size:12px;font-weight:750;color:#506780;display:flex;flex-direction:column;gap:7px}label.wide{grid-column:span 3}
+input,select,textarea{width:100%;border:1px solid #d6e3eb;border-radius:9px;padding:12px;font:inherit;color:#1d3449;background:white}
+textarea{min-height:100px}button{font:inherit;cursor:pointer}.btn{background:#0c9e91;border:0;border-radius:9px;color:#fff;font-weight:750;padding:12px 18px}
+.btn.secondary{background:#e6f5f3;color:#086b68}.btn.danger{background:#fff1f1;color:#b13e50}.actions{display:flex;gap:10px;flex-wrap:wrap}
+.cols{display:grid;grid-template-columns:1fr 1.3fr;gap:18px}.entry{padding:13px;border:1px solid #e3eaf0;border-radius:9px;margin:9px 0;display:flex;align-items:center;gap:10px}.entry>button:first-child{flex:1;text-align:left;border:0;background:transparent;font-weight:650;color:#25445c}
+pre{white-space:pre-wrap;font:13px/1.75 system-ui;background:#f8fafc;padding:20px;border-radius:10px;max-height:480px;overflow:auto}
+.note{font-size:12px;color:#647e93;background:#eaf4f6;padding:14px;border-radius:10px;margin-top:16px}
+@media(max-width:850px){.wrap{display:block}aside{padding:13px}.logo{margin-bottom:14px}.nav{display:inline-block;width:auto;font-size:12px;padding:10px}.tip{display:none}main{padding:18px}.cols{grid-template-columns:1fr}}
+@media(max-width:560px){.grid{grid-template-columns:1fr 1fr}.wide{grid-column:span 2!important}h1{font-size:24px}.panel{padding:16px}}
+</style></head><body><div class="wrap"><aside>
+<div class="logo"><span>📘</span><div>ADMINISTRASI GURU<div class="sub">Portal Mandiri • Kurikulum Merdeka</div></div></div>
+<div id="nav"></div><div class="tip">🔐 Data disimpan hanya di browser perangkat ini. Tidak memerlukan akun atau koneksi internet. Draf perlu ditinjau sebelum digunakan.</div></aside>
+<main><div class="kicker">WORKSPACE GURU</div><h1 id="heading">Rencana Pembelajaran</h1><div class="muted">Isi identitas, hasilkan draf administrasi, edit, simpan, dan ekspor ke Microsoft Word.</div>
+<section class="panel"><h2>✨ Generator Dokumen</h2><div class="muted">Formulir singkat dengan templat draf yang berbeda untuk setiap jenis dokumen.</div>
+<div class="grid">
+<label class="wide">Jenis dokumen<select id="kind"></select></label>
+<label>Nama sekolah<input id="school" value="SMA Islam Al-Ghozali"></label>
+<label>Jenjang<select id="level"><option>SMA</option><option>SD</option><option>SMP</option><option>SMK</option><option>MA</option><option>MTs</option></select></label>
+<label>Kelas<select id="grade"><option>X</option><option>XI</option><option>XII</option><option>VII</option><option>VIII</option><option>IX</option><option>I</option><option>II</option><option>III</option><option>IV</option><option>V</option><option>VI</option></select></label>
+<label>Mata pelajaran<input id="subject" value="Matematika"></label>
+<label class="wide">Topik / Materi / Bab<input id="topic" placeholder="Contoh: Eksponen dan Logaritma"></label>
+<label>Semester<select id="semester"><option>Ganjil</option><option>Genap</option></select></label>
+<label>Tahun ajaran<input id="year" value="2026/2027"></label>
+<label>Alokasi waktu (JP)<input id="hours" type="number" min="1" value="4"></label>
+</div>
+<div class="actions"><button class="btn" id="generate">✨ Generate Dokumen</button><button class="btn secondary" id="exportAll">⬇ Cadangkan Data JSON</button><label style="display:inline-flex;align-items:center;gap:5px">📂 Impor Data <input type="file" accept=".json" id="import" style="width:170px"></label></div>
+<p class="note" id="notice">Generator ini memakai templat lokal, bukan AI. CP resmi dan ketepatan akademik perlu diverifikasi guru.</p></section>
+<div class="cols"><section class="panel"><h2>📚 Dokumen Tersimpan</h2><div id="list"></div></section>
+<section class="panel"><h2>📄 Pratinjau & Edit</h2><div id="editor" style="display:none"><label>Judul<input id="docTitle"></label><label style="margin:12px 0">Konten dokumen<textarea id="docBody" style="min-height:310px"></textarea></label>
+<div class="actions"><button class="btn" id="save">💾 Simpan Edit</button><button class="btn secondary" id="word">⬇ Unduh Word (.doc)</button><button class="btn secondary" id="print">🖨 Cetak / PDF</button><button class="btn danger" id="delete">🗑 Hapus</button></div></div>
+<div class="muted" id="empty">Belum ada dokumen. Buat dokumen untuk mulai bekerja.</div></section></div>
+</main></div>
+<script>
+const groups={"Rencana Pembelajaran": ["Capaian Pembelajaran", "Tujuan Pembelajaran", "Alur Tujuan Pembelajaran", "Program Tahunan", "Program Semester", "Modul Ajar"], "Jurnal Guru": ["Jurnal Pembelajaran", "Bahan Ajar", "LKPD", "Refleksi Guru", "Portofolio"], "Administrasi Asesmen": ["KKTP", "Kisi-kisi Asesmen", "Instrumen Soal", "Rubrik Penilaian", "Remedial dan Pengayaan"]};
+let section='Rencana Pembelajaran', selected=null;
+const key='administrasi-guru-standalone-v1';
+let docs=[];try{docs=JSON.parse(localStorage.getItem(key)||'[]')}catch{}
+const $=id=>document.getElementById(id);
+const get=id=>$(id).value.trim();
+function persist(){localStorage.setItem(key,JSON.stringify(docs))}
+function safe(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
+function refreshNav(){ $('nav').innerHTML=Object.keys(groups).map(g=>'<button class="nav '+(g===section?'active':'')+'" data-group="'+safe(g)+'">'+safe(g)+'</button>').join('');
+ document.querySelectorAll('[data-group]').forEach(b=>b.onclick=()=>{section=b.dataset.group;selected=null;refresh()}) }
+function refresh(){refreshNav();$('heading').textContent=section;$('kind').innerHTML=groups[section].map(k=>'<option>'+safe(k)+'</option>').join('');
+ const filtered=docs.filter(d=>d.group===section);
+ $('list').innerHTML=filtered.length?filtered.map(d=>'<div class="entry"><button data-open="'+safe(d.id)+'">'+safe(d.title)+'</button><span class="muted">'+safe(d.date)+'</span></div>').join(''):'<p class="muted">Belum ada dokumen di kategori ini.</p>';
+ document.querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>{selected=b.dataset.open;refreshEditor()});refreshEditor()}
+function refreshEditor(){const d=docs.find(d=>d.id===selected);$('editor').style.display=d?'block':'none';$('empty').style.display=d?'none':'block';if(d){$('docTitle').value=d.title;$('docBody').value=d.body}}
+function content(kind,subject,topic,grade,hours){
+ const goal='Peserta didik mampu mengidentifikasi, menjelaskan, menerapkan, dan merefleksikan konsep '+topic+' dalam pembelajaran '+subject+'.';
+ let blocks=[];
+ if(kind==='Capaian Pembelajaran')blocks=['DRAF CAPAIAN PEMBELAJARAN',goal,'INDIKATOR OPERASIONAL','1. Menjelaskan konsep dan istilah kunci.','2. Memberikan contoh yang sesuai.','3. Memecahkan permasalahan kontekstual.','VERIFIKASI','Rumusan ini bukan kutipan CP resmi; cocokkan dengan dokumen CP fase yang berlaku.'];
+ else if(kind==='Tujuan Pembelajaran')blocks=['TUJUAN PEMBELAJARAN','1. Mengidentifikasi pengetahuan prasyarat.','2. Menjelaskan konsep utama '+topic+'.','3. Menerapkan konsep melalui latihan.','4. Merefleksikan proses dan hasil belajar.','INDIKATOR KETERCAPAIAN','Jawaban latihan benar, penjelasan runtut, dan contoh relevan.'];
+ else if(kind==='Alur Tujuan Pembelajaran')blocks=['URUTAN TUJUAN PEMBELAJARAN','TP 1: Mengenali masalah dan konsep dasar.','TP 2: Memahami prinsip dan prosedur.','TP 3: Menerapkan pada konteks nyata.','TP 4: Menganalisis dan mengevaluasi hasil.','Catatan: Sesuaikan dengan TP yang telah disahkan.'];
+ else if(kind==='Program Tahunan'||kind==='Program Semester')blocks=['RENCANA ALOKASI','Topik: '+topic,'Alokasi masukan: '+hours+' JP','Tahap 1: Orientasi dan diagnostik.','Tahap 2: Konsep inti dan latihan.','Tahap 3: Penerapan dan asesmen.','Tahap 4: Tindak lanjut.','CATATAN','Program lengkap membutuhkan semua bab, jadwal, hari efektif, dan kalender pendidikan.'];
+ else if(kind==='Modul Ajar'||kind==='Bahan Ajar')blocks=['TUJUAN PEMBELAJARAN',goal,'PEMAHAMAN BERMAKNA','Materi '+topic+' memiliki aplikasi pada kehidupan nyata.','PERTANYAAN PEMANTIK','Apa manfaat mempelajari '+topic+'?','KEGIATAN AWAL','Apersepsi dan asesmen diagnostik singkat.','KEGIATAN INTI','Eksplorasi contoh, diskusi, praktik, dan presentasi.','KEGIATAN PENUTUP','Rangkuman, refleksi, dan umpan balik.','PENILAIAN','Observasi, latihan, dan asesmen akhir.'];
+ else if(kind==='Jurnal Pembelajaran'||kind==='Refleksi Guru')blocks=['TUJUAN',goal,'CATATAN PELAKSANAAN','Tanggal: ______','Kehadiran: ______','Pendahuluan: apersepsi dan motivasi.','Kegiatan inti: penjelasan, diskusi, dan latihan.','Penutup: asesmen dan refleksi.','CAPAIAN NYATA','[Isi setelah pembelajaran]','HAMBATAN DAN TINDAK LANJUT','[Isi setelah pembelajaran]'];
+ else if(kind==='LKPD'||kind==='Portofolio')blocks=['TUJUAN',goal,'PETUNJUK','Baca sumber belajar, diskusikan, dan dokumentasikan hasil.','TUGAS 1','Jelaskan konsep inti '+topic+'.','TUGAS 2','Tuliskan dua contoh penerapan.','TUGAS 3','Analisis satu kasus terkait topik.','REFLEKSI','Tuliskan apa yang dipahami dan hal yang masih membingungkan.'];
+ else if(kind==='KKTP'||kind==='Rubrik Penilaian')blocks=['INDIKATOR',goal,'RUBRIK','Skor 4: Jawaban sangat tepat, lengkap dan mandiri.','Skor 3: Jawaban tepat, kekurangan minor.','Skor 2: Jawaban sebagian tepat, butuh bimbingan.','Skor 1: Masih belum memahami konsep mendasar.','BUKTI BELAJAR','Tugas, diskusi, presentasi, hasil penilaian.'];
+ else if(kind==='Kisi-kisi Asesmen')blocks=['INDIKATOR | LEVEL | BENTUK','Memahami konsep '+topic+' | C2 | Pilihan ganda','Menerapkan prinsip | C3 | Pilihan ganda','Menganalisis studi kasus | C4 | Uraian','Mengevaluasi solusi | C5 | Uraian','Jumlah dan bobot butir perlu disesuaikan dengan kebutuhan asesmen.'];
+ else if(kind==='Instrumen Soal')blocks=['SOAL DRAF','1. Jelaskan tiga konsep penting pada materi '+topic+' dan berikan contoh.','2. Jelaskan satu penerapan '+topic+' dalam kehidupan nyata.','3. Analisis permasalahan yang berhubungan dengan '+topic+' dan usulkan solusinya.','KRITERIA PENILAIAN','Ketepatan konsep, kelengkapan alasan, dan kejelasan uraian.','Catatan: Draf soal umum ini perlu validasi konten.'];
+ else blocks=['REMEDIAL','Identifikasi indikator yang belum tercapai.','Gunakan pengajaran ulang, latihan terbimbing, lalu tes ulang.','PENGAYAAN','Berikan studi kasus kompleks dan proyek kontekstual.','DOKUMENTASI','Catat progres tiap peserta didik.'];
+ return blocks.join('\n');
+}
+$('generate').onclick=()=>{
+ const topic=get('topic'),school=get('school'),subject=get('subject');if(!topic||!school||!subject){$('notice').textContent='⚠ Isi sekolah, mata pelajaran dan topik terlebih dahulu.';return}
+ const kind=get('kind');const header=[kind.toUpperCase(),'Satuan Pendidikan: '+school,'Jenjang/Kelas: '+get('level')+' / '+get('grade'),'Mata Pelajaran: '+subject,'Topik/Bab: '+topic,'Semester: '+get('semester'),'Tahun Ajaran: '+get('year'),'Alokasi: '+get('hours')+' JP',''];
+ const d={id:String(Date.now())+'-'+Math.random().toString(36).slice(2),group:section,title:kind+' — '+topic,date:new Date().toLocaleDateString('id-ID'),body:header.join('\n')+content(kind,subject,topic,get('grade'),get('hours'))};
+ docs.unshift(d);selected=d.id;persist();refresh();$('notice').textContent='✓ Dokumen dibuat dan tersimpan pada perangkat ini.'};
+$('save').onclick=()=>{const d=docs.find(d=>d.id===selected);if(!d)return;d.title=get('docTitle');d.body=$('docBody').value;persist();refresh();$('notice').textContent='✓ Perubahan disimpan.'};
+function download(blob,name){let u=URL.createObjectURL(blob),a=document.createElement('a');a.href=u;a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),1000)}
+$('word').onclick=()=>{let d=docs.find(d=>d.id===selected);if(!d)return;let html='<html><head><meta charset="utf-8"></head><body style="font-family:Calibri,Arial;font-size:11pt;line-height:1.3">'+safe($('docBody').value).replace(/\n/g,'<br>')+'</body></html>';download(new Blob(['\ufeff',html],{type:'application/msword'}),(get('docTitle')||'dokumen').replace(/[\\/:*?"<>|]/g,'_')+'.doc')};
+$('print').onclick=()=>{let w=window.open('','_blank');if(!w){alert('Izinkan pop-up untuk mencetak dokumen.');return}w.document.write('<html><head><title>Dokumen Guru</title></head><body style="font-family:Arial;white-space:pre-wrap;line-height:1.6;padding:30px">'+safe($('docBody').value)+'</body></html>');w.document.close();w.print()};
+$('delete').onclick=()=>{if(!selected||!confirm('Hapus dokumen ini?'))return;docs=docs.filter(d=>d.id!==selected);selected=null;persist();refresh()};
+$('exportAll').onclick=()=>download(new Blob([JSON.stringify(docs,null,2)],{type:'application/json'}),'cadangan-administrasi-guru.json');
+$('import').onchange=async e=>{let f=e.target.files[0];if(!f)return;try{let parsed=JSON.parse(await f.text());if(!Array.isArray(parsed)||!parsed.every(x=>x.id&&x.group&&x.body))throw Error();if(confirm('Impor '+parsed.length+' dokumen ke dalam daftar?')){docs=[...parsed,...docs.filter(d=>!parsed.some(p=>p.id===d.id))];persist();refresh()}}catch{alert('Format file JSON tidak cocok.')}e.target.value=''};
+refresh();
+</script></body></html>
