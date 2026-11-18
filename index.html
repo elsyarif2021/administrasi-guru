@@ -66,7 +66,7 @@ pre{white-space:pre-wrap;font:13px/1.75 system-ui;background:#f8fafc;padding:20p
 <div class="assessment-grid">
 <label>PG Biasa<input id="countPG" type="number" min="0" step="1" value="20"></label>
 <label>PG TKA<input id="countTKA" type="number" min="0" step="1" value="10"></label>
-<label>PG Salah–Benar<input id="countTrueFalse" type="number" min="0" step="1" value="5"></label>
+<label id="trueFalseField">PG Salah–Benar (khusus SMP)<input id="countTrueFalse" type="number" min="0" step="1" value="5"></label>
 <label>Esai<input id="countEssay" type="number" min="0" step="1" value="3"></label>
 <label>Esai TKA<input id="countEssayTKA" type="number" min="0" step="1" value="2"></label>
 <label>Opsi Jawaban PG<select id="answerOptions"><option value="A-C">A–C (3 opsi)</option><option value="A-D">A–D (4 opsi)</option><option value="A-E" selected>A–E (5 opsi)</option></select></label>
@@ -91,7 +91,7 @@ function persist(){localStorage.setItem(key,JSON.stringify(docs))}
 function safe(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
 function refreshNav(){ $('nav').innerHTML=Object.keys(groups).map(g=>'<button class="nav '+(g===section?'active':'')+'" data-group="'+safe(g)+'">'+safe(g)+'</button>').join('');
  document.querySelectorAll('[data-group]').forEach(b=>b.onclick=()=>{section=b.dataset.group;selected=null;refresh()}) }
-function refresh(){refreshNav();$('assessmentSettings').style.display=section==='Administrasi Asesmen'?'block':'none';$('heading').textContent=section;$('kind').innerHTML=groups[section].map(k=>'<option>'+safe(k)+'</option>').join('');
+function refresh(){refreshNav();$('assessmentSettings').style.display=section==='Administrasi Asesmen'?'block':'none';updateQuestionTotal();$('heading').textContent=section;$('kind').innerHTML=groups[section].map(k=>'<option>'+safe(k)+'</option>').join('');
  const filtered=docs.filter(d=>d.group===section);
  $('list').innerHTML=filtered.length?filtered.map(d=>'<div class="entry"><button data-open="'+safe(d.id)+'">'+safe(d.title)+'</button><span class="muted">'+safe(d.date)+'</span></div>').join(''):'<p class="muted">Belum ada dokumen di kategori ini.</p>';
  document.querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>{selected=b.dataset.open;refreshEditor()});refreshEditor()}
@@ -184,6 +184,7 @@ const modelNames=["kimi-k3.1-pro:cloud","deepseek-v4.1-flash:cloud","deepseek-v4
 
 const assessmentFields=['countPG','countTKA','countTrueFalse','countEssay','countEssayTKA'];
 function assessmentConfig(){
+ if(get('level')!=='SMP')$('countTrueFalse').value='0';
  const values=assessmentFields.map(id=>{
   const number=Number($(id).value);
   if(!Number.isSafeInteger(number)||number<0)throw Error('Jumlah soal harus berupa bilangan bulat tidak negatif.');
@@ -194,10 +195,15 @@ function assessmentConfig(){
  return {pg:values[0],pgTka:values[1],salahBenar:values[2],esai:values[3],esaiTka:values[4],total,opsi:get('answerOptions')};
 }
 function updateQuestionTotal(){
+ const isSmp=get('level')==='SMP';
+ $('trueFalseField').style.display=isSmp?'flex':'none';
+ $('countTrueFalse').disabled=!isSmp;
+ if(!isSmp)$('countTrueFalse').value='0';
  const values=assessmentFields.map(id=>Number($(id).value));
  $('totalQuestions').textContent=values.every(n=>Number.isSafeInteger(n)&&n>=0)?values.reduce((a,n)=>a+n,0):'Periksa input';
 }
 assessmentFields.forEach(id=>$(id).addEventListener('input',updateQuestionTotal));
+$('level').addEventListener('change',updateQuestionTotal);
 updateQuestionTotal();
 
 const defaultBackend=location.hostname.endsWith('.vercel.app') ? location.origin : 'https://administrasi-guru-delta.vercel.app';
